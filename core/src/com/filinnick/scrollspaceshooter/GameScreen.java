@@ -16,10 +16,13 @@ public class GameScreen implements Screen {
 
     //graphics
     private SpriteBatch batch;
-    private Texture background;
+//    private Texture background;
+    private Texture[] backgrounds;
 
     //timing
-    private int backgroundOffset;
+//    private int backgroundOffset;
+    private float[] backgroundOffsets = {0,0,0,0};
+    private float backgroundMaxScrollingSpeed;
 
     //world parameters
     private final int WORLD_WIDTH=72;
@@ -30,8 +33,8 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera();
         viewport = new StretchViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
 
-        background = new Texture("background.png");
-        backgroundOffset = 0;
+//        background = new Texture("background.png");
+//        backgroundOffset = 0;
 
         batch = new SpriteBatch();
 
