@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
@@ -40,10 +41,11 @@ public class GameScreen implements Screen {
     //world parameters
     private final int WORLD_WIDTH=72;
     private final int WORLD_HEIGHT=128;
+    private final float TOUCH_MOVEMENT_THRESHOLD = 0.5f;
 
     //game objects
-    private Ship playerShip;
-    private Ship enemyShip;
+    private PlayerShip playerShip;
+    private EnemyShip enemyShip;
     private LinkedList<Laser> playerLaserList;
     private LinkedList<Laser> enemyLaserList;
 
@@ -96,6 +98,7 @@ public class GameScreen implements Screen {
         batch.begin();
 
         detectInput(deltaTime);
+        moveEnemies(deltaTime);
 
         playerShip.update(deltaTime);
         enemyShip.update(deltaTime);
@@ -131,7 +134,7 @@ public class GameScreen implements Screen {
         leftLimit = -playerShip.boundingBox.x;
         downLimit = -playerShip.boundingBox.y;
         rightLimit = WORLD_WIDTH - playerShip.boundingBox.x - playerShip.boundingBox.width;
-        upLimit = WORLD_HEIGHT/2 - playerShip.boundingBox.y - playerShip.boundingBox.height;
+        upLimit = WORLD_HEIGHT - playerShip.boundingBox.y - playerShip.boundingBox.height;
 
         //TODO переменные под кнопки для пользовательского назначения кнопок
         if(Gdx.input.isKeyPressed(Input.Keys.RIGHT) && rightLimit > 0) {
@@ -148,6 +151,64 @@ public class GameScreen implements Screen {
         }
 
         //touch input (also mouse)
+
+        if(Gdx.input.isTouched() && !Gdx.input.isKeyPressed(Input.Keys.ANY_KEY)) { //TODO temporary resolve of unmultiplying speed of movement
+
+            //getting the screen position of the touch
+            float xTouchPixels = Gdx.input.getX();
+            float yTouchPixels = Gdx.input.getY();
+
+            //convert to world position
+            Vector2 touchPoint = new Vector2(xTouchPixels, yTouchPixels);
+            touchPoint = viewport.unproject(touchPoint);
+
+            //calculate x & y diff
+            Vector2 playerShipCentre = new Vector2(playerShip.boundingBox.x + playerShip.boundingBox.width / 2,
+                    playerShip.boundingBox.y + playerShip.boundingBox.height / 2);
+
+            float touchDistance = touchPoint.dst(playerShipCentre);
+
+            if(touchDistance > TOUCH_MOVEMENT_THRESHOLD) {
+                float xTouchDifference = touchPoint.x - playerShipCentre.x;
+                float yTouchDifference = touchPoint.y - playerShipCentre.y;
+
+                //scale to the maximum speed of the ship
+                float xMove = xTouchDifference / touchDistance *  playerShip.movementSpeed * deltaTime;
+                float yMove = yTouchDifference / touchDistance *  playerShip.movementSpeed * deltaTime;
+
+                if(xMove > 0 ) xMove = Math.min(xMove, rightLimit);
+                else xMove = Math.max(xMove, leftLimit);
+
+                if(yMove > 0 ) yMove = Math.min(yMove, upLimit);
+                else yMove = Math.max(yMove, downLimit);
+
+                playerShip.translate(xMove, yMove);
+            }
+
+        }
+    }
+
+    private void moveEnemies(float deltaTime) {
+        //strategy: determine the max distance th ship can move
+
+        float leftLimit, rightLimit, upLimit, downLimit;
+        leftLimit = -enemyShip.boundingBox.x;
+        downLimit = -enemyShip.boundingBox.y;
+        rightLimit = WORLD_WIDTH - enemyShip.boundingBox.x - enemyShip.boundingBox.width;
+        upLimit = WORLD_HEIGHT - enemyShip.boundingBox.y - enemyShip.boundingBox.height;
+
+        float xMove = enemyShip.getDirectionVector().x *  enemyShip.movementSpeed * deltaTime;
+        float yMove = enemyShip.getDirectionVector().y *  enemyShip.movementSpeed * deltaTime;
+
+        if(xMove > 0 ) xMove = Math.min(xMove, rightLimit);
+        else xMove = Math.max(xMove, leftLimit);
+
+        if(yMove > 0 ) yMove = Math.min(yMove, upLimit);
+        else yMove = Math.max(yMove, downLimit);
+
+        enemyShip.translate(xMove, yMove);
+
+
     }
 
     private void detectCollisions() {
